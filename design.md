@@ -66,25 +66,28 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 **重要特性**：
 - **每次备份任务独立**：子文件夹的生成基于每次备份任务中选中的文件，而非程序运行周期内的所有文件
 - **单次进程多次备份**：如果单次进程执行多次备份操作，每次备份都会独立计算时间范围并生成新的子文件夹
-- **has_copy 标记**：备份完成的文件会被标记为 `has_copy=1`，下次备份时只处理 `has_copy=0` 的文件
+- **copy 类型的 has_copy 标记**：copy 操作完成的文件会被标记为 `has_copy=1`，下次备份时只处理 `has_copy=0` 的文件；move 和 delete 操作成功后会直接删除数据库记录
 - **自定义名称支持**：用户可在备份时输入自定义名称，附加到子文件夹名后
+- **查询逻辑差异**：
+  - copy 类型：只查询 `has_copy=0` 的文件（待备份文件）
+  - move 类型：查询所有文件（move/delete 成功后记录会被删除，剩余的都是待处理的）
 
 **核心逻辑**：
 1. **按 backup_path 分组**：将配置中 `target_sub_folder_name_rule` 为 `every_time` 且 `backup_path` 相同的后缀归为一组
-2. **计算时间范围**：查询本次备份任务中该组所有后缀的待备份文件（`has_copy=0`），找出整体的最早和最晚修改时间
+2. **计算时间范围**：查询本次备份任务中该组所有后缀的文件，找出整体的最早和最晚修改时间
 3. **生成统一文件夹名**：同一组的所有后缀文件共享同一个子文件夹
 4. **附加自定义名称**：若用户输入了自定义名称，则在文件夹名后添加空格和自定义名称
 
 **时间范围计算逻辑**：
 
 *单U盘备份时*：
-1. 查询该U盘中该组所有后缀的待备份文件（`has_copy=0`）
+1. 查询该U盘中该组所有后缀的文件（copy 类型只查 has_copy=0）
 2. 找出最早和最晚的修改时间
 3. 根据时间跨度生成文件夹名
 
 *多U盘备份时*：
 1. 遍历所有U盘
-2. 对每个U盘，查询该组所有后缀的待备份文件（`has_copy=0`）
+2. 对每个U盘，查询该组所有后缀的文件（copy 类型只查 has_copy=0）
 3. 合并所有U盘的时间范围，取全局最小值和最大值
 4. 根据时间跨度生成文件夹名
 
@@ -316,7 +319,7 @@ U盘列表：
 
 - **幂等性**：扫描操作是幂等的，重复扫描不会产生异常
 - **覆盖式更新**：重复扫描时，已有文件记录会被更新，新文件会被添加
-- **不影响备份状态**：扫描操作不会修改 `has_copy` 字段
+- **不影响备份状态**：扫描操作不会修改 `has_copy` 字段（该字段仅 copy 类型使用）
 
 ### 4.3 备份前自动扫描
 
@@ -346,7 +349,7 @@ CREATE TABLE file_info (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path VARCHAR(255),      -- 文件相对路径
     md5 VARCHAR(255) DEFAULT '', -- 文件MD5（预留字段，当前未使用）
-    has_copy INTEGER DEFAULT 0,  -- 是否已备份：0=未备份，1=已备份
+    has_copy INTEGER DEFAULT 0,  -- copy操作专用标记：0=未备份，1=已备份（move/delete操作不使用此字段，成功后直接删除记录）
     file_size INTEGER DEFAULT 0, -- 文件大小（字节）
     file_create_time INTEGER DEFAULT 0,  -- 文件创建时间戳
     file_modify_time INTEGER DEFAULT 0,  -- 文件修改时间戳
@@ -389,13 +392,27 @@ def calculate_time_range_for_all_udisks(backup_path_group):
     # 构建 IN 查询的占位符
     placeholders = ','.join(['?' for _ in backup_path_group])
     
+    # 获取该组的备份类型
+    backup_type = get_backup_type_for_group(backup_path_group)
+    
     for udisk in udisk_list:
-        # 查询该U盘数据库中该组后缀文件的时间范围
-        cursor.execute(f"""
-            SELECT MIN(file_modify_time), MAX(file_modify_time) 
-            FROM file_info 
-            WHERE suffix IN ({placeholders}) AND has_copy = 0
-        """, backup_path_group)
+        # 根据备份类型决定查询条件
+        if backup_type == 'copy':
+            # copy 类型：只查询待备份的文件（has_copy=0）
+            query = f"""
+                SELECT MIN(file_modify_time), MAX(file_modify_time) 
+                FROM file_info 
+                WHERE suffix IN ({placeholders}) AND has_copy = 0
+            """
+        else:
+            # move 类型：查询所有文件（move/delete 成功后记录会被删除，剩余的都是待处理的）
+            query = f"""
+                SELECT MIN(file_modify_time), MAX(file_modify_time) 
+                FROM file_info 
+                WHERE suffix IN ({placeholders})
+            """
+        
+        cursor.execute(query, backup_path_group)
         result = cursor.fetchone()
         if result and result[0]:
             min_time = min(min_time, result[0])
