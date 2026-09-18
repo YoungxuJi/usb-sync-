@@ -1,0 +1,3 @@
+# 唯一第三方依赖：用于枚举可移动驱动器、获取驱动器类型、弹出 U盘 等 Windows API 调用
+# 其余依赖均为 Python 标准库（os/time/configparser/ctypes/sqlite3/shutil 等），无需安装
+pywin32
