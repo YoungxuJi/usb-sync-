@@ -183,7 +183,7 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 
 从源码运行：`python src/main.py`
 
-打包为 exe（使用 [PyInstaller](https://pyinstaller.org/)，生成 `dist/U盘备份工具/` 发布文件夹与 `dist/U盘备份工具_v<版本号>.zip` 发布压缩包）：
+打包为 exe（使用 [PyInstaller](https://pyinstaller.org/)，生成 `dist/U盘备份工具/` 发布文件夹与 `dist/UdiskBackup_v<版本号>.zip` 发布压缩包）：
 
 ```bash
 pip install pyinstaller
@@ -193,7 +193,7 @@ python scripts/build_exe.py
 打包产物说明：
 
 - `dist/U盘备份工具/`：整个文件夹一起分发，双击其中的 `U盘备份工具.exe` 即可运行
-- `dist/U盘备份工具_v<版本号>.zip`：适合直接上传到 GitHub Releases 的发布包（版本号解析自 `src/main.py` 中的 `__version__`）
+- `dist/UdiskBackup_v<版本号>.zip`：适合直接上传到 GitHub Releases 的发布包（因 GitHub 会将附件名中的中文清洗为 `.`，故使用英文名；版本号解析自 `src/main.py` 中的 `__version__`）
 - `config.example.ini` 会复制进发布文件夹；若被删除，程序在提示配置缺失时也会从内置资源自动释放一份
 - `doc/` 目录下的说明文件会复制进发布文件夹：`运行程序前请阅读我README.MD`（新手说明）、`使用说明书.MD`（软件使用说明）
 

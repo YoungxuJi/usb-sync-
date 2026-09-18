@@ -7,7 +7,7 @@
     - 可执行文件位于 dist/U盘备份工具/U盘备份工具.exe
     - 示例配置 config.example.ini 会同时复制到该目录，便于用户直接编辑
     - doc/ 目录下的说明文件（运行程序前请阅读我README.MD、使用说明书.MD）会复制到发布目录
-    - 发布压缩包位于 dist/U盘备份工具_v<版本号>.zip（版本号解析自 src/main.py 的 __version__），可直接上传 GitHub Releases
+    - 发布压缩包位于 dist/UdiskBackup_v<版本号>.zip（版本号解析自 src/main.py 的 __version__），可直接上传 GitHub Releases
 """
 import os
 import re
@@ -17,6 +17,7 @@ import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP_NAME = 'U盘备份工具'
+RELEASE_ZIP_NAME = 'UdiskBackup'  # 发布 zip 的英文名：GitHub Release 附件名会将中文等非 ASCII 字符清洗为 "."，zip 内部文件夹仍为中文 APP_NAME
 ENTRY_SCRIPT = os.path.join('src', 'main.py')
 EXAMPLE_CONFIG = 'config.example.ini'
 DOC_DIR = 'doc'  # 随发布包分发的说明文件所在目录
@@ -103,9 +104,9 @@ def main():
             os.path.join(dist_dir, guide_name),
         )
 
-    # 生成发布压缩包（文件名含版本号，便于区分不同版本），便于上传 GitHub Releases
+    # 生成发布压缩包（英文文件名含版本号：GitHub Release 附件名不支持中文，非 ASCII 字符会被清洗为 "."）
     version = get_app_version()
-    zip_basename = APP_NAME + ('_v' + version if version else '')
+    zip_basename = RELEASE_ZIP_NAME + ('_v' + version if version else '')
     zip_path = shutil.make_archive(
         os.path.join(PROJECT_ROOT, 'dist', zip_basename), 'zip',
         root_dir=os.path.join(PROJECT_ROOT, 'dist'), base_dir=APP_NAME,
