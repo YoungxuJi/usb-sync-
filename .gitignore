@@ -1,3 +1,8 @@
 *__pycache__
 .qoder*
 config.ini
+
+# PyInstaller 打包产物
+build/
+dist/
+*.spec

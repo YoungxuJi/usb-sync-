@@ -32,6 +32,10 @@ class MenuSystem:
                     return choice-1
                 else:
                     print(f"请输入 1 到 {options_count} 之间的数字。")
+            except EOFError:
+                # 输入流已关闭（如非交互式运行或输入被重定向耗尽），按退出处理
+                print()
+                return -1
             except ValueError:
                 print("请输入有效的数字或 'q' 退出。")
     
@@ -65,4 +69,10 @@ class MenuSystem:
             else:
                 print("该选项没有定义功能。")
             
-            input("\n按回车键继续...")
+            try:
+                input("\n按回车键继续...")
+            except EOFError:
+                # 输入流已关闭，直接退出菜单循环
+                print()
+                self.running = False
+                return

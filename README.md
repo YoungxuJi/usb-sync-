@@ -1,4 +1,4 @@
-# 相机照片导入自动化系统
+# U盘备份工具
 
 一个运行于 Windows 的交互式命令行工具，用于自动备份 U 盘中的相机照片和视频文件。程序会扫描插入的可移动 U 盘，根据文件后缀执行复制、移动或删除操作，并按日期或时间范围自动归类到指定目标路径，支持多 U 盘合并处理与增量备份。
 
@@ -17,10 +17,11 @@
 
 ## 环境要求
 
-- Windows 操作系统（依赖 pywin32 与 Windows API，无法跨平台运行）
-- Python 3.x
+- Windows 操作系统（依赖 Windows API，无法跨平台运行）
+- 使用打包版：无需安装 Python 与任何依赖
+- 从源码运行：Python 3.x
 
-## 安装
+## 安装（从源码运行时）
 
 项目依赖已声明在 `requirements.txt` 中（仅 pywin32 一个第三方库，其余均为 Python 标准库），在项目根目录执行以下命令一键安装：
 
@@ -30,9 +31,17 @@ pip install -r requirements.txt
 
 ## 快速开始
 
+### 方式一：使用打包版（推荐普通用户）
+
+1. 从 [GitHub Releases](../../releases) 下载发布包（zip）并解压（也可自行打包，见[开发与打包](#开发与打包)）
+2. 将文件夹中的 `config.example.ini` 复制或重命名为 `config.ini`，并按文件内注释修改备份策略（详见[配置说明](#配置说明)）
+3. 双击 `U盘备份工具.exe` 运行
+
+### 方式二：从源码运行（开发者）
+
 **第一步：创建配置文件**
 
-将示例配置 `config.example.ini` 复制或重命名为 `config.ini`，并按文件内注释修改备份策略（详见[配置说明](#配置说明)）：
+在项目根目录将示例配置 `config.example.ini` 复制或重命名为 `config.ini`，并按文件内注释修改备份策略（详见[配置说明](#配置说明)）：
 
 ```bash
 copy config.example.ini config.ini
@@ -41,10 +50,10 @@ copy config.example.ini config.ini
 **第二步：运行程序**
 
 ```bash
-python main.py
+python src/main.py
 ```
 
-典型使用流程：
+### 典型使用流程
 
 1. 插入 U 盘，运行程序
 2. 首次使用时先初始化 U 盘数据库（主菜单或 U 盘菜单中均有入口）
@@ -54,7 +63,7 @@ python main.py
 
 ## 配置说明
 
-配置文件为程序同级目录下的 `config.ini`（INI 格式，支持 `#` / `;` 注释）。仓库中提供示例配置 `config.example.ini`，首次使用请：
+配置文件为 `config.ini`（INI 格式，支持 `#` / `;` 注释），位于程序同级目录：使用打包版时为 exe 所在目录，从源码运行时为项目根目录。仓库中提供示例配置 `config.example.ini`，首次使用请：
 
 1. 将 `config.example.ini` 复制或重命名为 `config.ini`
 2. 按文件内注释修改备份策略
@@ -67,26 +76,26 @@ python main.py
 ### 配置格式
 
 ```ini
-# 每个 [strategy.xxx] 段落代表一条备份策略，可自由增加、删除或调整顺序
-[strategy.jpg]
+# 每个段落（如 [strategy.1]）代表一条备份策略，段名可任意命名（仅用于区分不同策略），可自由增加、删除或调整顺序
+[strategy.1]
 suffix = jpg, jpeg
 backup_type = copy
 backup_path = D:\Backup\Photos
 target_sub_folder_name_rule = every_day
 
-[strategy.video]
+[strategy.2]
 suffix = mov, mp4
 backup_type = move
 backup_path = %USERPROFILE%\Videos\Captures
 target_sub_folder_name_rule = every_time
 
-[strategy.raw]
+[strategy.3]
 suffix = dng, orf
 backup_type = move
 backup_path = %USERPROFILE%\Pictures\相机
 target_sub_folder_name_rule = every_time
 
-[strategy.delete_lrf]
+[strategy.4]
 suffix = lrf
 backup_type = delete
 ```
@@ -170,15 +179,38 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 | 目标文件存在且大小相同 | 视为同一文件，跳过并标记为已备份 |
 | 目标文件存在但大小不同 | 重命名后备份：`photo.jpg` → `photo_1.jpg` → `photo_2.jpg` ... |
 
+## 开发与打包
+
+从源码运行：`python src/main.py`
+
+打包为 exe（使用 [PyInstaller](https://pyinstaller.org/)，生成 `dist/U盘备份工具/` 发布文件夹与同名 zip 压缩包）：
+
+```bash
+pip install pyinstaller
+python scripts/build_exe.py
+```
+
+打包产物说明：
+
+- `dist/U盘备份工具/`：整个文件夹一起分发，双击其中的 `U盘备份工具.exe` 即可运行
+- `dist/U盘备份工具.zip`：适合直接上传到 GitHub Releases 的发布包
+- `config.example.ini` 会复制进发布文件夹；若被删除，程序在提示配置缺失时也会从内置资源自动释放一份
+
 ## 项目结构
 
 ```
 .
-├── main.py             # 主程序：配置加载、U 盘管理、扫描、备份、统计、弹出
-├── MenuSystem.py       # 通用命令行菜单框架
+├── src/
+│   ├── main.py        # 主程序：配置加载、U 盘管理、扫描、备份、统计、弹出
+│   └── MenuSystem.py  # 通用命令行菜单框架
+├── scripts/
+│   ├── build_exe.py   # PyInstaller 打包脚本（生成 dist/U盘备份工具/）
+│   └── build_exe.bat  # 一键打包脚本（双击运行）
 ├── config.example.ini  # 示例配置：复制或重命名为 config.ini 后修改
 ├── config.ini          # 备份策略配置（需手动创建，已被 git 忽略）
-└── design.md           # 设计文档
+├── requirements.txt    # 运行依赖（仅 pywin32）
+├── README.md           # 项目说明文档
+└── LICENSE             # MIT 开源协议
 ```
 
 ## 注意事项
@@ -186,4 +218,9 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 - 程序仅识别 `DRIVE_REMOVABLE` 类型的可移动驱动器，不会处理固定硬盘
 - 程序不会自动创建配置文件：未找到 `config.ini` 时以空策略运行，并按提示复制 `config.example.ini` 创建
 - 扫描是幂等的：重复扫描会更新已有记录、补充新文件，并将发生变化的文件重新标记为待备份
-- 备份前若目标路径不存在，程序会提示创建；选择不创建则中�
+- 备份前若目标路径不存在，程序会提示创建；选择不创建则中断本次备份
+- 备份过程中单个文件失败不会中断整体流程，结束后会汇总显示失败数量
+
+## 开源协议
+
+本项目基于 [MIT License](LICENSE) 开源。

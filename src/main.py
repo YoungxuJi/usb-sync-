@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import configparser
 from MenuSystem import MenuSystem  # 从模块中导入类
@@ -988,21 +989,45 @@ def check_backup_dir():
     
     return action_into_main_menu()
 
+def get_base_dir():
+    """获取程序基准目录：打包后为 exe 所在目录，源码运行时为项目根目录"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def get_config_path():
-    """获取配置文件路径（与脚本同目录）"""
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), CONFIG_FILE_NAME)
+    """获取配置文件路径（与程序同目录）"""
+    return os.path.join(get_base_dir(), CONFIG_FILE_NAME)
+
+
+def ensure_example_config_file(base_dir):
+    """确保程序目录下存在示例配置文件；打包环境下若缺失则从内置资源释放一份"""
+    example_path = os.path.join(base_dir, EXAMPLE_CONFIG_FILE_NAME)
+    if os.path.exists(example_path):
+        return example_path
+    if getattr(sys, 'frozen', False):
+        bundled_path = os.path.join(getattr(sys, '_MEIPASS', ''), EXAMPLE_CONFIG_FILE_NAME)
+        if os.path.exists(bundled_path):
+            try:
+                import shutil
+                shutil.copyfile(bundled_path, example_path)
+            except Exception:
+                return bundled_path
+    return example_path
 
 
 def print_config_guide():
     """提示用户配置文件不存在或无效，并指导如何创建配置文件"""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = get_base_dir()
+    example_path = ensure_example_config_file(base_dir)
     print()
     print("=" * 64)
     print(f"如需使用本程序，请先创建配置文件 {CONFIG_FILE_NAME}：")
-    print(f"  1. 找到程序目录下的示例配置：{os.path.join(base_dir, EXAMPLE_CONFIG_FILE_NAME)}")
+    print(f"  1. 找到程序目录下的示例配置：{example_path}")
     print(f"  2. 将示例配置复制或重命名为：{os.path.join(base_dir, CONFIG_FILE_NAME)}")
     print("  3. 按示例文件中的注释修改备份策略（后缀、操作类型、备份路径等）")
-    print("  4. 修改完成后重新运行 main.py 生效")
+    print("  4. 修改完成后重新运行本程序生效")
     print("=" * 64)
     print()
 
