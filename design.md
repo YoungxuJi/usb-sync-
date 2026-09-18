@@ -8,26 +8,22 @@
 
 ### 2.1 配置文件格式
 
-配置文件为 `config.json`，存放在程序同级目录。
+配置文件为 `config.ini`（INI 格式，支持 `#` / `;` 注释），存放在程序同级目录。仓库提供示例配置 `config.example.ini`，需复制或重命名为 `config.ini` 后修改；`config.ini` 已加入 `.gitignore`，不纳入版本管理。
 
-```json
-{
-    "backup_strategies": [
-        {
-            "suffix": ["<文件后缀1>", "<文件后缀2>", ...],
-            "backup_type": "<copy|move|delete>",
-            "backup_path": "<目标备份路径>",
-            "target_sub_folder_name_rule": "<every_day|every_time>"
-        }
-    ]
-}
+```ini
+# 每个 [strategy.xxx] 段落代表一条备份策略，段落名可自定义
+[strategy.1]
+suffix = <文件后缀1>, <文件后缀2>
+backup_type = <copy|move|delete>
+backup_path = <目标备份路径>
+target_sub_folder_name_rule = <every_day|every_time>
 ```
 
 ### 2.2 配置字段说明
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `suffix` | array[string] | 是 | 文件后缀名数组，支持多个后缀共享同一策略 |
+| `suffix` | string | 是 | 文件后缀名，多个用英文逗号（或空格）分隔，不区分大小写，支持多个后缀共享同一策略 |
 | `backup_type` | string | 是 | 备份类型：`copy`（复制）、`move`（移动）、`delete`（删除） |
 | `backup_path` | string | 否 | 目标备份路径，`delete` 类型时无需填写 |
 | `target_sub_folder_name_rule` | string | 否 | 子文件夹命名规则，`delete` 类型时无需填写 |
@@ -149,48 +145,43 @@ D:\Pictures\相机\2026.07.28-2026.08.02 周末拍摄\photo2.orf
 
 ### 2.4 配置示例
 
-```json
-{
-    "backup_strategies": [
-        {
-            "suffix": ["jpg", "jpeg"],
-            "backup_type": "copy",
-            "backup_path": "D:\\backup\\jpg",
-            "target_sub_folder_name_rule": "every_day"
-        },
-        {
-            "suffix": ["mov", "mp4"],
-            "backup_type": "move",
-            "backup_path": "D:\\35906\\Videos\\Captures",
-            "target_sub_folder_name_rule": "every_time"
-        },
-        {
-            "suffix": ["dng", "orf"],
-            "backup_type": "move",
-            "backup_path": "D:\\35906\\Pictures\\相机",
-            "target_sub_folder_name_rule": "every_time"
-        },
-        {
-            "suffix": ["lrf"],
-            "backup_type": "delete"
-        }
-    ]
-}
+```ini
+[strategy.jpg]
+suffix = jpg, jpeg
+backup_type = copy
+backup_path = D:\backup\jpg
+target_sub_folder_name_rule = every_day
+
+[strategy.video]
+suffix = mov, mp4
+backup_type = move
+backup_path = D:\35906\Videos\Captures
+target_sub_folder_name_rule = every_time
+
+[strategy.raw]
+suffix = dng, orf
+backup_type = move
+backup_path = D:\35906\Pictures\相机
+target_sub_folder_name_rule = every_time
+
+[strategy.delete_lrf]
+suffix = lrf
+backup_type = delete
 ```
 
 ### 2.5 配置加载逻辑
 
-1. 程序启动时读取 `config.json`
-2. 若配置文件不存在，使用内置默认配置
-3. 若配置文件格式错误，提示用户并使用默认配置
-4. 记录当前配置来源（配置文件/默认配置）
+1. 程序启动时读取 `config.ini`（`configparser` 解析，支持行内注释与 UTF-8 BOM）
+2. 若配置文件不存在，不报错：以空策略运行，并提示用户复制 `config.example.ini` 为 `config.ini` 后修改
+3. 若配置文件读取失败或段落字段无效（缺少 suffix/backup_type、backup_type 非法等），跳过无效段落并提示；无任何有效策略时按空策略运行
+4. 记录当前配置来源（配置文件/未配置）
 
 ### 2.6 配置显示格式
 
 显示配置时使用自然语言，而非 JSON 格式：
 
 ```
-当前生效配置（来源：配置文件/默认配置）
+当前生效配置（来源：配置文件/未配置）
 
 备份策略：
 1. jpg/jpeg 文件
@@ -215,6 +206,7 @@ D:\Pictures\相机\2026.07.28-2026.08.02 周末拍摄\photo2.orf
 **说明**：
 - 「按时间范围生成（同路径文件共享子文件夹）」表示：相同备份路径的所有文件，根据整体时间范围生成统一的子文件夹
 - 无论是单U盘备份还是多U盘备份，都使用相同的规则
+- 当没有加载到任何有效策略时，显示"当前没有任何备份策略。"并输出创建配置文件的引导信息
 
 ## 三、功能模块
 
@@ -254,6 +246,7 @@ U盘列表：
 
 **显示规则**：
 - 每个U盘显示盘符和状态（已初始化/未初始化，已扫描/未扫描）
+- 未加载到任何有效配置时，标题顶部显示配置提示行（引导复制 config.example.ini 创建 config.ini）
 - 统计信息从所有已扫描U盘的数据库中汇总
 - copy 类型显示：总文件数量、待备份文件数量、文件总大小、备份路径
 - move 类型显示：总文件数量、文件总大小、备份路径
@@ -292,7 +285,6 @@ U盘列表：
 | 备份所有U盘文件 | 始终显示 | 将所有U盘文件备份到目标路径 |
 | 弹出所有U盘 | 始终显示 | 安全弹出所有U盘 |
 | 显示当前配置 | 始终显示 | 以自然语言显示当前生效的配置 |
-| 生成配置文件 | 当前使用默认配置时显示 | 将默认配置保存为 config.json |
 | 检测目标路径是否存在 | 始终显示 | 遍历所有备份策略中的目标路径，若存在未创建的路径，提示用户创建 |
 | <U盘盘符> | 有U盘时显示 | 进入单个U盘菜单 |
 | <U盘盘符>(未初始化) | U盘未初始化时显示 | 进入单个U盘菜单 |
@@ -579,7 +571,8 @@ def eject_all_udisks():
 | 目标路径不存在 | 提示用户创建路径 |
 | 文件复制/移动失败 | 记录错误统计，继续处理其他文件 |
 | 数据库损坏 | 删除数据库文件，中断备份流程，提示用户重新初始化 |
-| 配置文件不存在 | 使用内置默认配置 |
-| 配置文件格式错误 | 提示用户，使用默认配置 |
+| 配置文件不存在 | 不报错：以空策略运行，提示用户复制 config.example.ini 为 config.ini 后修改 |
+| 配置文件读取失败/段落无效 | 跳过无效段落并提示，无有效策略时按空策略运行 |
+| 未配置有效策略时执行扫描/备份 | 提示先创建并配置 config.ini，不执行操作 |
 | 同名文件存在且大小相同 | 跳过，标记为已备份（见第九章） |
 | 同名文件存在且大小不同 | 重命名后备份（见第九章） |

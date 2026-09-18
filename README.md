@@ -30,6 +30,16 @@ pip install pywin32
 
 ## 快速开始
 
+**第一步：创建配置文件**
+
+将示例配置 `config.example.ini` 复制或重命名为 `config.ini`，并按文件内注释修改备份策略（详见[配置说明](#配置说明)）：
+
+```bash
+copy config.example.ini config.ini
+```
+
+**第二步：运行程序**
+
 ```bash
 python main.py
 ```
@@ -44,44 +54,48 @@ python main.py
 
 ## 配置说明
 
-配置文件为程序同级目录下的 `config.json`。若文件不存在或格式错误，程序会自动回退到内置默认配置（可在主菜单选择"生成配置文件"将其导出）。
+配置文件为程序同级目录下的 `config.ini`（INI 格式，支持 `#` / `;` 注释）。仓库中提供示例配置 `config.example.ini`，首次使用请：
+
+1. 将 `config.example.ini` 复制或重命名为 `config.ini`
+2. 按文件内注释修改备份策略
+3. 重新运行程序使配置生效
+
+> - `config.ini` 已被 `.gitignore` 忽略，不会被 git 记录；程序不会自动创建配置文件
+> - 若启动时未找到 `config.ini`，程序不报错：以空策略运行（不扫描、不备份任何文件），并提示创建方法
+> - 配置修改后需重启程序生效
 
 ### 配置格式
 
-```json
-{
-    "backup_strategies": [
-        {
-            "suffix": ["jpg", "jpeg"],
-            "backup_type": "copy",
-            "backup_path": "D:\\backup\\jpg",
-            "target_sub_folder_name_rule": "every_day"
-        },
-        {
-            "suffix": ["mov", "mp4"],
-            "backup_type": "move",
-            "backup_path": "D:\\35906\\Videos\\Captures",
-            "target_sub_folder_name_rule": "every_time"
-        },
-        {
-            "suffix": ["dng", "orf"],
-            "backup_type": "move",
-            "backup_path": "D:\\35906\\Pictures\\相机",
-            "target_sub_folder_name_rule": "every_time"
-        },
-        {
-            "suffix": ["lrf"],
-            "backup_type": "delete"
-        }
-    ]
-}
+```ini
+# 每个 [strategy.xxx] 段落代表一条备份策略，可自由增加、删除或调整顺序
+[strategy.jpg]
+suffix = jpg, jpeg
+backup_type = copy
+backup_path = D:\backup\jpg
+target_sub_folder_name_rule = every_day
+
+[strategy.video]
+suffix = mov, mp4
+backup_type = move
+backup_path = D:\35906\Videos\Captures
+target_sub_folder_name_rule = every_time
+
+[strategy.raw]
+suffix = dng, orf
+backup_type = move
+backup_path = D:\35906\Pictures\相机
+target_sub_folder_name_rule = every_time
+
+[strategy.delete_lrf]
+suffix = lrf
+backup_type = delete
 ```
 
 ### 字段说明
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `suffix` | array[string] | 是 | 文件后缀名数组，多个后缀可共享同一策略 |
+| `suffix` | string | 是 | 文件后缀名，多个用英文逗号（或空格）分隔，不区分大小写，多个后缀可共享同一策略 |
 | `backup_type` | string | 是 | 操作类型：`copy`（复制）、`move`（移动）、`delete`（删除） |
 | `backup_path` | string | 否 | 目标备份路径，`delete` 类型无需填写 |
 | `target_sub_folder_name_rule` | string | 否 | 子文件夹命名规则：`every_day` / `every_time`，`delete` 类型无需填写 |
@@ -132,7 +146,6 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 | 备份所有 U 盘文件 | 将所有 U 盘文件按策略备份到目标路径 |
 | 弹出所有 U 盘 | 安全弹出全部 U 盘 |
 | 显示当前配置 | 以自然语言显示当前生效的备份策略 |
-| 生成配置文件 | 将默认配置保存为 config.json（使用默认配置时显示） |
 | 检测目标路径是否存在 | 检查并提示创建缺失的备份目录 |
 | `<U 盘盘符>` | 进入单个 U 盘子菜单 |
 
@@ -161,15 +174,17 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 
 ```
 .
-├── main.py          # 主程序：配置加载、U 盘管理、扫描、备份、统计、弹出
-├── MenuSystem.py    # 通用命令行菜单框架
-├── config.json      # 备份策略配置
-└── design.md        # 设计文档
+├── main.py             # 主程序：配置加载、U 盘管理、扫描、备份、统计、弹出
+├── MenuSystem.py       # 通用命令行菜单框架
+├── config.example.ini  # 示例配置：复制或重命名为 config.ini 后修改
+├── config.ini          # 备份策略配置（需手动创建，已被 git 忽略）
+└── design.md           # 设计文档
 ```
 
 ## 注意事项
 
 - 程序仅识别 `DRIVE_REMOVABLE` 类型的可移动驱动器，不会处理固定硬盘
+- 程序不会自动创建配置文件：未找到 `config.ini` 时以空策略运行，并按提示复制 `config.example.ini` 创建
 - 扫描是幂等的：重复扫描会更新已有记录、补充新文件，并将发生变化的文件重新标记为待备份
 - 备份前若目标路径不存在，程序会提示创建；选择不创建则中断本次备份
 - 备份过程中单个文件失败不会中断整体流程，结束后会汇总显示失败数量

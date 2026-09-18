@@ -1,6 +1,6 @@
 import os
 import time
-import json
+import configparser
 from MenuSystem import MenuSystem  # 从模块中导入类
 import win32api
 import win32con
@@ -12,10 +12,13 @@ import sqlite3
 udisk_list = []
 current_udisk = None
 current_suffix_sub_floder_name_map = {}
-config_source = "默认配置"
+config_source = "未配置"
 
-# SUFFIX_SETTING 和相关常量已移除，由 load_config() 函数统一管理配置加载
-# load_config() 会从 config.json 加载配置，若不存在则使用内置默认配置
+CONFIG_FILE_NAME = 'config.ini'                  # 实际使用的配置文件（已加入 .gitignore，不被git记录）
+EXAMPLE_CONFIG_FILE_NAME = 'config.example.ini'  # 示例配置文件（随仓库分发）
+
+# SUFFIX_SETTING 和相关常量由 load_config() 函数统一管理配置加载
+# load_config() 会从 config.ini 加载配置，若不存在则以空策略运行并提示用户创建配置文件
 # 这些变量将在 load_config() 中初始化
 SCAN_SUFFIX_LIST = []
 SAME_PATH_WHIH_EVERY_TIME_SUFFIX = {}
@@ -212,6 +215,10 @@ def action_scan_file():
     扫描所有指定后缀的文件，记录信息到数据库
     """
     global current_udisk
+    if not SCAN_SUFFIX_LIST:
+        print(f"当前没有可用的备份策略，无法扫描文件（请先创建并配置 {CONFIG_FILE_NAME}）")
+        print_config_guide()
+        return action_into_udisk(current_udisk)
     sql_path = os.path.join(current_udisk['drive_path'], '.auto_backup_data/sqlite.db')
     conn = sqlite3.connect(sql_path)
     cursor = conn.cursor()
@@ -500,6 +507,9 @@ def refresh_udisk_statistic():
     """
     global current_suffix_sub_floder_name_map
     
+    if not SUFFIX_SETTING:
+        return ""
+    
     sql_path = os.path.join(current_udisk['drive_path'], '.auto_backup_data/sqlite.db')
     data = get_udisk_data_from_db(sql_path)
     
@@ -520,6 +530,9 @@ def get_all_udisks_statistic():
     Returns:
         str: 统计文本
     """
+    if not SUFFIX_SETTING:
+        return ""
+    
     # 收集所有已扫描U盘的数据
     udisk_data_list = []
     
@@ -701,6 +714,11 @@ def action_into_udisk(udisk_info,last_action = None):
 def action_backup_file():
     """备份当前U盘文件"""
     global current_udisk
+    
+    if not SUFFIX_SETTING:
+        print(f"当前没有可用的备份策略，无法备份文件（请先创建并配置 {CONFIG_FILE_NAME}）")
+        print_config_guide()
+        return action_into_udisk(current_udisk)
     
     # 获取自定义名称
     custom_name = get_custom_name()
@@ -906,10 +924,6 @@ def action_into_main_menu():
     if has_uninitialized:
         next_menu_options.insert(1, {'description': '初始化所有U盘数据库', 'callback': action_init_all_udisks})
     
-    # 如果当前使用默认配置，添加生成配置文件选项
-    if config_source == "默认配置":
-        next_menu_options.append({'description': '生成配置文件', 'callback': action_generate_config})
-    
     # 将每个U盘信息都添加到菜单中
     for udisk in udisk_list:
         des = udisk['drive_path']
@@ -919,6 +933,8 @@ def action_into_main_menu():
 
     # 生成主菜单标题
     title = "主菜单\n"
+    if not SUFFIX_SETTING:
+        title += f"\n【配置提示】未找到有效的 {CONFIG_FILE_NAME}，请复制 {EXAMPLE_CONFIG_FILE_NAME} 并重命名为 {CONFIG_FILE_NAME}，修改后重启程序\n"
     
     # U盘列表
     title += "\nU盘列表："
@@ -949,7 +965,9 @@ def check_backup_dir():
                 if not os.path.exists(dir_path):
                     missing_paths.append(dir_path)
     
-    if missing_paths:
+    if not checked_paths:
+        print("当前配置中没有备份路径，无需检查")
+    elif missing_paths:
         print("以下备份路径不存在：")
         for path in missing_paths:
             print(f"  - {path}")
@@ -970,68 +988,90 @@ def check_backup_dir():
     
     return action_into_main_menu()
 
+def get_config_path():
+    """获取配置文件路径（与脚本同目录）"""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), CONFIG_FILE_NAME)
+
+
+def print_config_guide():
+    """提示用户配置文件不存在或无效，并指导如何创建配置文件"""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    print()
+    print("=" * 64)
+    print(f"如需使用本程序，请先创建配置文件 {CONFIG_FILE_NAME}：")
+    print(f"  1. 找到程序目录下的示例配置：{os.path.join(base_dir, EXAMPLE_CONFIG_FILE_NAME)}")
+    print(f"  2. 将示例配置复制或重命名为：{os.path.join(base_dir, CONFIG_FILE_NAME)}")
+    print("  3. 按示例文件中的注释修改备份策略（后缀、操作类型、备份路径等）")
+    print("  4. 修改完成后重新运行 main.py 生效")
+    print("=" * 64)
+    print()
+
+
+def parse_suffix_list(suffix_text):
+    """解析后缀配置字符串，支持英文/中文逗号或空格分隔，忽略大小写与 * . 前缀"""
+    suffix_list = []
+    for chunk in suffix_text.replace('，', ',').split(','):
+        for item in chunk.split():
+            suffix = item.strip().lower().lstrip('*.')
+            if suffix and suffix not in suffix_list:
+                suffix_list.append(suffix)
+    return suffix_list
+
+
 def load_config():
-    """加载配置文件，如果不存在或格式错误则使用默认配置"""
+    """
+    加载 config.ini 配置文件
+    配置文件不存在或读取失败时不报错：以空策略运行，并提示用户如何创建配置文件
+    """
     global SUFFIX_SETTING, SCAN_SUFFIX_LIST, SAME_PATH_WHIH_EVERY_TIME_SUFFIX, config_source
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
-    default_config = {
-        "backup_strategies": [
-            {
-                "suffix": ["jpg", "jpeg"],
-                "backup_type": "copy",
-                "backup_path": "D:\\backup\\jpg",
-                "target_sub_folder_name_rule": "every_day"
-            },
-            {
-                "suffix": ["mov", "mp4"],
-                "backup_type": "move",
-                "backup_path": "D:\\35906\\Videos\\Captures",
-                "target_sub_folder_name_rule": "every_time"
-            },
-            {
-                "suffix": ["dng", "orf"],
-                "backup_type": "move",
-                "backup_path": "D:\\35906\\Pictures\\相机",
-                "target_sub_folder_name_rule": "every_time"
-            },
-            {
-                "suffix": ["lrf"],
-                "backup_type": "delete"
-            }
-        ]
-    }
-    
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                if 'backup_strategies' in config and isinstance(config['backup_strategies'], list):
-                    config_source = "配置文件"
-                else:
-                    print("配置文件格式错误，使用默认配置")
-                    config = default_config
-        except (json.JSONDecodeError, Exception) as e:
-            print(f"配置文件读取失败: {e}，使用默认配置")
-            config = default_config
-    else:
-        print("配置文件不存在，使用默认配置")
-        config = default_config
-    
-    # 转换配置格式
+    config_path = get_config_path()
     new_suffix_setting = {}
-    for strategy in config['backup_strategies']:
-        suffix_list = strategy['suffix']
-        backup_type = strategy['backup_type']
-        backup_path = strategy.get('backup_path', '')
-        target_sub_folder_name_rule = strategy.get('target_sub_folder_name_rule', '')
-        
-        for suffix in suffix_list:
-            suffix_config = {'backup_type': backup_type}
-            if backup_path:
-                suffix_config['backup_path'] = backup_path
-            if target_sub_folder_name_rule:
-                suffix_config['target_sub_folder_name_rule'] = target_sub_folder_name_rule
-            new_suffix_setting[suffix] = suffix_config
+    config_source = "未配置"
+    
+    if not os.path.exists(config_path):
+        print(f"配置文件不存在：{config_path}")
+        print_config_guide()
+    else:
+        try:
+            parser = configparser.ConfigParser(
+                inline_comment_prefixes=('#', ';'),  # 支持行内注释
+                interpolation=None,                  # 关闭 % 插值，避免路径中的特殊字符触发异常
+            )
+            # utf-8-sig 兼容带/不带 BOM 的 UTF-8 文件（Windows 记事本另存为可能带 BOM）
+            parser.read(config_path, encoding='utf-8-sig')
+            
+            for section in parser.sections():
+                suffix_list = parse_suffix_list(parser.get(section, 'suffix', fallback=''))
+                backup_type = parser.get(section, 'backup_type', fallback='').strip().lower()
+                if not suffix_list or not backup_type:
+                    print(f"配置段落 [{section}] 缺少 suffix 或 backup_type，已跳过")
+                    continue
+                if backup_type not in ('copy', 'move', 'delete'):
+                    print(f"配置段落 [{section}] 的 backup_type 无效（{backup_type}），已跳过（可选值：copy / move / delete）")
+                    continue
+                
+                backup_path = parser.get(section, 'backup_path', fallback='').strip()
+                rule = parser.get(section, 'target_sub_folder_name_rule', fallback='').strip().lower()
+                if rule and rule not in ('every_day', 'every_time'):
+                    print(f"配置段落 [{section}] 的 target_sub_folder_name_rule 无效（{rule}），将不生成子文件夹")
+                    rule = ''
+                
+                for suffix in suffix_list:
+                    suffix_config = {'backup_type': backup_type}
+                    if backup_path:
+                        suffix_config['backup_path'] = backup_path
+                    if rule:
+                        suffix_config['target_sub_folder_name_rule'] = rule
+                    new_suffix_setting[suffix] = suffix_config
+            
+            config_source = "配置文件"
+            if not new_suffix_setting:
+                print(f"配置文件 {config_path} 中没有加载到任何有效策略")
+                print_config_guide()
+        except Exception as e:
+            print(f"配置文件读取失败：{e}")
+            print_config_guide()
+            new_suffix_setting = {}
     
     SUFFIX_SETTING = new_suffix_setting
     SCAN_SUFFIX_LIST = list(SUFFIX_SETTING)
@@ -1050,6 +1090,10 @@ def action_show_config():
     global config_source
     print(f"当前生效配置（来源：{config_source}）")
     print()
+    if not SUFFIX_SETTING:
+        print("当前没有任何备份策略。")
+        print_config_guide()
+        return action_into_main_menu()
     print("备份策略：")
     
     # 按备份类型和路径分组
@@ -1092,55 +1136,6 @@ def action_show_config():
                 print(f"   - 子文件夹规则：按时间范围生成（同路径文件共享子文件夹）")
         
         print()
-    
-    return action_into_main_menu()
-
-def action_generate_config():
-    """生成配置文件"""
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
-    
-    # 检查是否已存在配置文件
-    if os.path.exists(config_path):
-        print(f"配置文件已存在: {config_path}")
-        user_input = input("是否覆盖？(y/n): ").strip().lower()
-        if user_input != 'y':
-            print("已取消生成配置文件")
-            return action_into_main_menu()
-    
-    # 生成默认配置
-    default_config = {
-        "backup_strategies": [
-            {
-                "suffix": ["jpg", "jpeg"],
-                "backup_type": "copy",
-                "backup_path": "D:\\backup\\jpg",
-                "target_sub_folder_name_rule": "every_day"
-            },
-            {
-                "suffix": ["mov", "mp4"],
-                "backup_type": "move",
-                "backup_path": "D:\\35906\\Videos\\Captures",
-                "target_sub_folder_name_rule": "every_time"
-            },
-            {
-                "suffix": ["dng", "orf"],
-                "backup_type": "move",
-                "backup_path": "D:\\35906\\Pictures\\相机",
-                "target_sub_folder_name_rule": "every_time"
-            },
-            {
-                "suffix": ["lrf"],
-                "backup_type": "delete"
-            }
-        ]
-    }
-    
-    try:
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(default_config, f, ensure_ascii=False, indent=4)
-        print(f"配置文件已生成: {config_path}")
-    except Exception as e:
-        print(f"生成配置文件失败: {e}")
     
     return action_into_main_menu()
 
@@ -1190,6 +1185,10 @@ def action_init_all_udisks():
 def action_scan_all_udisks():
     """扫描所有U盘文件"""
     global udisk_list
+    if not SCAN_SUFFIX_LIST:
+        print(f"当前没有可用的备份策略，无法扫描文件（请先创建并配置 {CONFIG_FILE_NAME}）")
+        print_config_guide()
+        return action_into_main_menu()
     success_count = 0
     for udisk in udisk_list:
         if not udisk['has_sqlite_flie']:
@@ -1263,6 +1262,11 @@ def action_backup_all_udisks():
     """备份所有U盘文件"""
     global udisk_list
     import shutil
+    
+    if not SUFFIX_SETTING:
+        print(f"当前没有可用的备份策略，无法备份文件（请先创建并配置 {CONFIG_FILE_NAME}）")
+        print_config_guide()
+        return action_into_main_menu()
     
     print("开始备份所有U盘文件...")
     
@@ -1513,7 +1517,7 @@ def main():
     menu_system = MenuSystem()
 
     global udisk_list
-    # 加载配置
+    # 加载配置（配置文件不存在时以空策略运行，并提示用户创建配置文件）
     load_config()
     print(f"配置来源: {config_source}")
     init_backup_paths_info()
