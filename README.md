@@ -71,19 +71,19 @@ python main.py
 [strategy.jpg]
 suffix = jpg, jpeg
 backup_type = copy
-backup_path = D:\backup\jpg
+backup_path = D:\Backup\Photos
 target_sub_folder_name_rule = every_day
 
 [strategy.video]
 suffix = mov, mp4
 backup_type = move
-backup_path = D:\35906\Videos\Captures
+backup_path = %USERPROFILE%\Videos\Captures
 target_sub_folder_name_rule = every_time
 
 [strategy.raw]
 suffix = dng, orf
 backup_type = move
-backup_path = D:\35906\Pictures\相机
+backup_path = %USERPROFILE%\Pictures\相机
 target_sub_folder_name_rule = every_time
 
 [strategy.delete_lrf]
@@ -97,7 +97,7 @@ backup_type = delete
 |------|------|------|------|
 | `suffix` | string | 是 | 文件后缀名，多个用英文逗号（或空格）分隔，不区分大小写，多个后缀可共享同一策略 |
 | `backup_type` | string | 是 | 操作类型：`copy`（复制）、`move`（移动）、`delete`（删除） |
-| `backup_path` | string | 否 | 目标备份路径，`delete` 类型无需填写 |
+| `backup_path` | string | 否 | 目标备份路径，`delete` 类型无需填写；支持环境变量（如 `%USERPROFILE%`）与 `~` 前缀，加载时自动展开为实际路径 |
 | `target_sub_folder_name_rule` | string | 否 | 子文件夹命名规则：`every_day` / `every_time`，`delete` 类型无需填写 |
 
 ### 子文件夹命名规则

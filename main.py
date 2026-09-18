@@ -1051,6 +1051,8 @@ def load_config():
                     continue
                 
                 backup_path = parser.get(section, 'backup_path', fallback='').strip()
+                # 展开路径中的环境变量（如 %USERPROFILE%）与 ~ 前缀（当前用户目录），便于编写通用的示例配置
+                backup_path = os.path.expandvars(os.path.expanduser(backup_path))
                 rule = parser.get(section, 'target_sub_folder_name_rule', fallback='').strip().lower()
                 if rule and rule not in ('every_day', 'every_time'):
                     print(f"配置段落 [{section}] 的 target_sub_folder_name_rule 无效（{rule}），将不生成子文件夹")
