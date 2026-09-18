@@ -42,6 +42,18 @@ def get_app_version():
 
 
 def main():
+    # 部分环境（如英文系统的 CI）输出编码无法表示中文（如 cp1252），打印中文时会抛
+    # UnicodeEncodeError 导致打包中断；探测到无法编码中文时将输出流切换为 UTF-8
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, 'reconfigure'):
+            try:
+                '中文'.encode(stream.encoding or 'utf-8')
+            except (UnicodeEncodeError, LookupError):
+                try:
+                    stream.reconfigure(encoding='utf-8', errors='replace')
+                except Exception:
+                    pass
+
     try:
         import PyInstaller  # noqa: F401
     except ImportError:

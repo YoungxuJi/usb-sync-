@@ -12,6 +12,8 @@ permissions:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'  # 强制 Python 使用 UTF-8，避免 CI 英文系统下打印中文报 UnicodeEncodeError
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
