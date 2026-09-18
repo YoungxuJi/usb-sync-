@@ -195,6 +195,7 @@ python scripts/build_exe.py
 - `dist/U盘备份工具/`：整个文件夹一起分发，双击其中的 `U盘备份工具.exe` 即可运行
 - `dist/U盘备份工具.zip`：适合直接上传到 GitHub Releases 的发布包
 - `config.example.ini` 会复制进发布文件夹；若被删除，程序在提示配置缺失时也会从内置资源自动释放一份
+- `doc/` 目录下的说明文件会复制进发布文件夹：`运行程序前请阅读我README.MD`（新手说明）、`使用说明书.MD`（软件使用说明）
 
 ## 项目结构
 
@@ -206,6 +207,9 @@ python scripts/build_exe.py
 ├── scripts/
 │   ├── build_exe.py   # PyInstaller 打包脚本（生成 dist/U盘备份工具/）
 │   └── build_exe.bat  # 一键打包脚本（双击运行）
+├── doc/
+│   ├── 运行程序前请阅读我README.MD  # 新手说明（随发布包分发，提示先完成配置）
+│   └── 使用说明书.MD                 # 软件使用说明（随发布包分发）
 ├── config.example.ini  # 示例配置：复制或重命名为 config.ini 后修改
 ├── config.ini          # 备份策略配置（需手动创建，已被 git 忽略）
 ├── requirements.txt    # 运行依赖（仅 pywin32）

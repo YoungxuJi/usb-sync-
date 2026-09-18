@@ -6,6 +6,7 @@
 打包完成后：
     - 可执行文件位于 dist/U盘备份工具/U盘备份工具.exe
     - 示例配置 config.example.ini 会同时复制到该目录，便于用户直接编辑
+    - doc/ 目录下的说明文件（运行程序前请阅读我README.MD、使用说明书.MD）会复制到发布目录
     - 发布压缩包位于 dist/U盘备份工具.zip，可直接上传 GitHub Releases
 """
 import os
@@ -17,6 +18,11 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP_NAME = 'U盘备份工具'
 ENTRY_SCRIPT = os.path.join('src', 'main.py')
 EXAMPLE_CONFIG = 'config.example.ini'
+DOC_DIR = 'doc'  # 随发布包分发的说明文件所在目录
+USER_GUIDES = [
+    '运行程序前请阅读我README.MD',
+    '使用说明书.MD',
+]
 
 
 def main():
@@ -56,12 +62,18 @@ def main():
         print('打包失败，请检查上方 PyInstaller 输出')
         return result.returncode
 
-    # 将示例配置复制到发布目录，用户首次运行前即可查看和编辑
+    # 将示例配置与 doc/ 说明文件复制到发布目录，用户首次运行前即可查看和编辑
     dist_dir = os.path.join(PROJECT_ROOT, 'dist', APP_NAME)
     shutil.copyfile(
         os.path.join(PROJECT_ROOT, EXAMPLE_CONFIG),
         os.path.join(dist_dir, EXAMPLE_CONFIG),
     )
+    doc_src = os.path.join(PROJECT_ROOT, DOC_DIR)
+    for guide_name in USER_GUIDES:
+        shutil.copyfile(
+            os.path.join(doc_src, guide_name),
+            os.path.join(dist_dir, guide_name),
+        )
 
     # 生成发布压缩包，便于上传 GitHub Releases
     zip_path = shutil.make_archive(
