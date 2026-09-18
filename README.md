@@ -183,7 +183,7 @@ D:\backup\jpg\2026.08.05\photo2.jpg
 
 从源码运行：`python src/main.py`
 
-打包为 exe（使用 [PyInstaller](https://pyinstaller.org/)，生成 `dist/U盘备份工具/` 发布文件夹与同名 zip 压缩包）：
+打包为 exe（使用 [PyInstaller](https://pyinstaller.org/)，生成 `dist/U盘备份工具/` 发布文件夹与 `dist/U盘备份工具_v<版本号>.zip` 发布压缩包）：
 
 ```bash
 pip install pyinstaller
@@ -193,14 +193,19 @@ python scripts/build_exe.py
 打包产物说明：
 
 - `dist/U盘备份工具/`：整个文件夹一起分发，双击其中的 `U盘备份工具.exe` 即可运行
-- `dist/U盘备份工具.zip`：适合直接上传到 GitHub Releases 的发布包
+- `dist/U盘备份工具_v<版本号>.zip`：适合直接上传到 GitHub Releases 的发布包（版本号解析自 `src/main.py` 中的 `__version__`）
 - `config.example.ini` 会复制进发布文件夹；若被删除，程序在提示配置缺失时也会从内置资源自动释放一份
 - `doc/` 目录下的说明文件会复制进发布文件夹：`运行程序前请阅读我README.MD`（新手说明）、`使用说明书.MD`（软件使用说明）
+
+发布新版本流程：同步更新 `src/main.py` 中的 `__version__` 与 `CHANGELOG.md`，提交并推送后打标签（如 `git tag -a v1.0.1 -m "..."`）并推送 tag，GitHub Actions 会自动打包并把 zip 上传到 Release；也可本地运行 `python scripts/build_exe.py` 后在 GitHub Releases 页面手动上传。
 
 ## 项目结构
 
 ```
 .
+├── .github/
+│   └── workflows/
+│       └── release.yml  # GitHub Actions：推送 v* 标签时自动打包并发布 Release
 ├── src/
 │   ├── main.py        # 主程序：配置加载、U 盘管理、扫描、备份、统计、弹出
 │   └── MenuSystem.py  # 通用命令行菜单框架
@@ -212,6 +217,7 @@ python scripts/build_exe.py
 │   └── 使用说明书.MD                 # 软件使用说明（随发布包分发）
 ├── config.example.ini  # 示例配置：复制或重命名为 config.ini 后修改
 ├── config.ini          # 备份策略配置（需手动创建，已被 git 忽略）
+├── CHANGELOG.md        # 版本更新日志
 ├── requirements.txt    # 运行依赖（仅 pywin32）
 ├── README.md           # 项目说明文档
 └── LICENSE             # MIT 开源协议

@@ -17,6 +17,7 @@ config_source = "未配置"
 
 CONFIG_FILE_NAME = 'config.ini'                  # 实际使用的配置文件（已加入 .gitignore，不被git记录）
 EXAMPLE_CONFIG_FILE_NAME = 'config.example.ini'  # 示例配置文件（随仓库分发）
+__version__ = '1.0.0'                            # 程序版本号（与 git tag、GitHub Release 保持一致，发布新版本时同步修改）
 
 # SUFFIX_SETTING 和相关常量由 load_config() 函数统一管理配置加载
 # load_config() 会从 config.ini 加载配置，若不存在则以空策略运行并提示用户创建配置文件
@@ -932,8 +933,8 @@ def action_into_main_menu():
             des = des+"(未初始化)"
         next_menu_options.append({'description': des, 'callback': action_into_udisk, 'args': [udisk]})
 
-    # 生成主菜单标题
-    title = "主菜单\n"
+    # 生成主菜单标题（含程序名与版本号，便于用户确认当前版本）
+    title = f"【U盘备份工具 v{__version__}】主菜单\n"
     if not SUFFIX_SETTING:
         title += f"\n【配置提示】未找到有效的 {CONFIG_FILE_NAME}，请复制 {EXAMPLE_CONFIG_FILE_NAME} 并重命名为 {CONFIG_FILE_NAME}，修改后重启程序\n"
     

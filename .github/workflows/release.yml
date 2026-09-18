@@ -1,0 +1,52 @@
+name: 发布 Release
+
+# 推送 v 开头的标签（如 v1.0.0）时触发：自动打包并创建 GitHub Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write  # 创建 Release 需要写权限
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 校验标签与程序版本号一致
+        shell: pwsh
+        run: |
+          $content = Get-Content -Path 'src/main.py' -Raw -Encoding UTF8
+          if ($content -match "__version__\s*=\s*'([^']+)'") {
+            $version = $Matches[1]
+          } else {
+            Write-Error "未能从 src/main.py 中解析到 __version__，请检查代码"
+            exit 1
+          }
+          if ("v$version" -ne $env:GITHUB_REF_NAME) {
+            Write-Error "标签 $env:GITHUB_REF_NAME 与 src/main.py 中的版本号（v$version）不一致，请先统一版本号再发布"
+            exit 1
+          }
+          Write-Host "版本校验通过：$env:GITHUB_REF_NAME"
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: 打包程序
+        run: python scripts/build_exe.py
+
+      - name: 创建 Release 并上传发布包
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
