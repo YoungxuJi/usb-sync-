@@ -197,7 +197,7 @@ python scripts/build_exe.py
 - `config.example.ini` 会复制进发布文件夹；若被删除，程序在提示配置缺失时也会从内置资源自动释放一份
 - `doc/` 目录下的说明文件会复制进发布文件夹：`运行程序前请阅读我README.MD`（新手说明）、`使用说明书.MD`（软件使用说明）
 
-发布新版本流程：同步更新 `src/main.py` 中的 `__version__` 与 `CHANGELOG.md`，提交并推送后打标签（如 `git tag -a v1.0.1 -m "..."`）并推送 tag，GitHub Actions 会自动打包并把 zip 上传到 Release；也可本地运行 `python scripts/build_exe.py` 后在 GitHub Releases 页面手动上传。
+发布新版本流程：同步更新 `src/main.py` 中的 `__version__` 与 `CHANGELOG.md`，提交并推送后打标签（如 `git tag -a v1.0.1 -m "..."`）并推送 tag，GitHub Actions 会自动打包、把 zip 上传到 Release，并将 `CHANGELOG.md` 中对应版本的更新内容作为 Release 说明；也可本地运行 `python scripts/build_exe.py` 后在 GitHub Releases 页面手动上传。
 
 ## 项目结构
 
@@ -211,6 +211,7 @@ python scripts/build_exe.py
 │   └── MenuSystem.py  # 通用命令行菜单框架
 ├── scripts/
 │   ├── build_exe.py   # PyInstaller 打包脚本（生成 dist/U盘备份工具/）
+│   ├── extract_changelog.py  # 从 CHANGELOG.md 提取指定版本的发布说明（CI 生成 Release 正文）
 │   └── build_exe.bat  # 一键打包脚本（双击运行）
 ├── doc/
 │   ├── 运行程序前请阅读我README.MD  # 新手说明（随发布包分发，提示先完成配置）

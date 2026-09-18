@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 拉取完整历史与标签，便于定位上一版本生成 Full Changelog 对比链接
+          fetch-tags: true
 
       - name: 校验标签与程序版本号一致
         shell: pwsh
@@ -47,6 +50,9 @@ jobs:
       - name: 打包程序
         run: python scripts/build_exe.py
 
+      - name: 生成发布说明（提取 CHANGELOG.md 中当前版本的段落）
+        run: python scripts/extract_changelog.py $env:GITHUB_REF_NAME release_notes.md
+
       - name: 删除同名的旧 Release（重推同一标签时先清理，保证发布幂等）
         shell: pwsh
         env:
@@ -57,8 +63,8 @@ jobs:
             Write-Host "不存在旧 Release，跳过清理"
           }
 
-      - name: 创建 Release 并上传发布包
+      - name: 创建 Release 并上传发布包（正文取自 CHANGELOG.md 提取的发布说明）
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip
-          generate_release_notes: true
+          body_path: release_notes.md
