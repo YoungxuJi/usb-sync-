@@ -12,60 +12,13 @@ import sqlite3
 udisk_list = []
 current_udisk = None
 current_suffix_sub_floder_name_map = {}
-DEFAULT_RAW_PATH = 'D:\\35906\\Pictures\\相机'
-DEFAULT_JPG_PATH = 'D:\\backup\\jpg'
-DEFAULT_VIDEO_PATH = 'D:\\35906\\Videos\\Captures'
 config_source = "默认配置"
 
-#不同文件类型备份策略
-SUFFIX_SETTING={
-    'jpg':{
-        'backup_type':'copy',
-        'backup_path':DEFAULT_JPG_PATH,
-        'target_sub_floder_name_rule':'every_day'
-
-    },
-    'jpeg':{
-        'backup_type':'copy',
-        'backup_path':DEFAULT_JPG_PATH,
-        'target_sub_floder_name_rule':'every_day'
-
-    },
-    'mov':{
-        'backup_type':'move',
-        'backup_path':DEFAULT_VIDEO_PATH,
-        'target_sub_floder_name_rule':'every_time'
-    },
-    'mp4':{
-        'backup_type':'move',
-        'backup_path':DEFAULT_VIDEO_PATH,
-        'target_sub_floder_name_rule':'every_time'
-
-    },
-    'dng':{
-        'backup_type':'move',
-        'backup_path':DEFAULT_RAW_PATH,
-        'target_sub_floder_name_rule':'every_time'
-    },
-    'orf':{
-        'backup_type':'move',
-        'backup_path':DEFAULT_RAW_PATH,
-        'target_sub_floder_name_rule':'every_time'
-    },
-    'lrf':{
-        'backup_type':'delete',
-    },
-}
-# 需要扫描的文件后缀
-SCAN_SUFFIX_LIST = list(SUFFIX_SETTING)
-
+# SUFFIX_SETTING 和相关常量已移除，由 load_config() 函数统一管理配置加载
+# load_config() 会从 config.json 加载配置，若不存在则使用内置默认配置
+# 这些变量将在 load_config() 中初始化
+SCAN_SUFFIX_LIST = []
 SAME_PATH_WHIH_EVERY_TIME_SUFFIX = {}
-for suffix in SCAN_SUFFIX_LIST:
-    if 'target_sub_floder_name_rule' in SUFFIX_SETTING[suffix] and SUFFIX_SETTING[suffix]['target_sub_floder_name_rule'] == 'every_time':
-        if SUFFIX_SETTING[suffix]['backup_path'] in SAME_PATH_WHIH_EVERY_TIME_SUFFIX:
-            SAME_PATH_WHIH_EVERY_TIME_SUFFIX[SUFFIX_SETTING[suffix]['backup_path']].append(suffix)
-        else:
-            SAME_PATH_WHIH_EVERY_TIME_SUFFIX[SUFFIX_SETTING[suffix]['backup_path']] = [suffix]
 #{
 #    backup_path:{
 #        old_path:string
