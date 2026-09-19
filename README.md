@@ -15,6 +15,15 @@
 - **U 盘本地数据库**：每个 U 盘在 `.auto_backup_data/sqlite.db` 中维护文件索引与备份日志，实现去重与审计
 - **安全弹出 U 盘**：通过 Windows DeviceIoControl API 弹出设备
 
+## 下载
+
+- **普通用户（推荐）**：前往 [GitHub Releases](https://github.com/YoungxuJi/udisk-backup/releases) 页面下载最新版本发布包 `UdiskBackup_v<版本号>.zip`，解压后即可使用，无需安装 Python 与任何依赖
+- **开发者**：克隆源码仓库：
+
+```bash
+git clone https://github.com/YoungxuJi/udisk-backup.git
+```
+
 ## 环境要求
 
 - Windows 操作系统（依赖 Windows API，无法跨平台运行）
@@ -33,7 +42,7 @@ pip install -r requirements.txt
 
 ### 方式一：使用打包版（推荐普通用户）
 
-1. 从 [GitHub Releases](../../releases) 下载发布包（zip）并解压（也可自行打包，见[开发与打包](#开发与打包)）
+1. 从 [GitHub Releases](https://github.com/YoungxuJi/udisk-backup/releases) 下载发布包（zip）并解压（也可自行打包，见[开发与打包](#开发与打包)）
 2. 将文件夹中的 `config.example.ini` 复制或重命名为 `config.ini`，并按文件内注释修改备份策略（详见[配置说明](#配置说明)）
 3. 双击 `U盘备份工具.exe` 运行
 
@@ -234,4 +243,4 @@ python scripts/build_exe.py
 
 ## 开源协议
 
-本项目基于 [MIT License](LICENSE) 开源。
+本项目基于 [MIT License](https://github.com/YoungxuJi/udisk-backup/blob/main/LICENSE) 开源。
